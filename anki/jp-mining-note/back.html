@@ -518,11 +518,44 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
 
 
 
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
+  <!-- ============================================================================================================================== -->
 
 
 
   <div class="expression expression-box">
+
+  <!-- ============================================================================================================================== -->
+      <style>
+          .expression-box {
+              display: none;!important!
+          }
+      </style>
+
+
     {{#IsHoverCard}}
+
 
 
       <!-- fallback card card html
@@ -657,14 +690,7 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
   {{/Hint}}
 
 
-
-  <center>
-    <div class="answer-border"></div>
-  </center>
-
-
-
-
+  <!-- ============================================================================================================================== -->
 
 
 
@@ -720,7 +746,7 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
 
       </span>
 
-      <div class="dh-left__reading" id="dh_reading"> {{furigana:WordReading}} </div>
+      <div class="dh-left__reading" id="dh_reading"> {{furigana:WordReading}}  </div>
 
       <!-- defaults if the auto-pitch-accent module is disabled.
         The field content ALWAYS gets overwritten with the module enabled,
@@ -744,6 +770,7 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
         -->
 
         <!-- wrapped around to prevent title from appearing to the sides -->
+
         <span class="dh-left__word-pitch-text" id="dh_word_pitch_text"
             {{#PAOverrideText}}
               title="PAOverrideText (no js)"
@@ -764,35 +791,9 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
             >{{#PAOverrideText}}{{PAOverrideText}}{{/PAOverrideText}}{{^PAOverrideText}}{{#PAOverride}}{{PAOverride}}{{/PAOverride}}{{^PAOverride}}{{#AJTWordPitch}}{{AJTWordPitch}}{{/AJTWordPitch}}{{/PAOverride}}{{/PAOverrideText}}</span>
 
       </div>
-
-      <div class="dh-left__audio-buttons {{#Picture}} dh-left__audio-buttons--left {{/Picture}}"
-          id="dh_left_audio_buttons">
-        <span id="word-audio"> {{WordAudio}} </span>
-        <span id="sentence-audio"> {{SentenceAudio}} </span>
-      </div>
-
     </div>
-
-    <!-- everything on the right side -->
-    <!-- heavily nested elements:
-      - stop-blur-edges: requires a div outside the regular blur to remove the blurred edges
-      - nsfw-blur: `transition filter (of --clickable)` will affect the blur -> not blurred state
-        - we don't want that
-    -->
-    <div class="dh-right {{#Picture}} dh-right--contains-image {{/Picture}}" id="dh_right">
-      <div class="dh-right__img-container-stop-blur-edges">
-        <div class="dh-right__img-container-nsfw-blur" id="dh_img_container_nsfw_blur">
-          <div class="dh-right__img-container dh-right__img-container--clickable" id="dh_img_container">{{Picture}}</div>
-        </div>
-        <svg class="dh-right__svg-eye" id="img_svg_eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5Z"/><title>Toggle blur temporarily</title></svg>
-      </div>
-    </div>
-
   </div>
 
-
-
-  <div id="back_side" class="back-side">
 
 
   <div class="center-box-1 full-sentence">
@@ -807,6 +808,40 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
       </div>
     </div>
   </div>
+
+
+
+  <!-- ========================================================== PIC ==================================================================== -->
+
+  <div class="def-header" id="pic-audio">
+
+  <div id="the_pic">
+
+        <div class="dh-right__img-container-stop-blur-edges">
+          <div class="dh-right__img-container-nsfw-blur" id="dh_img_container_nsfw_blur">
+            <div class="dh-right__img-container dh-right__img-container--clickable" id="dh_img_container">{{Picture}}</div>
+          </div>
+          <svg class="dh-right__svg-eye" id="img_svg_eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5 5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5Z"/><title>Toggle blur temporarily</title></svg>
+        </div>
+
+  </div>
+
+
+    <div class="dh-left__audio-buttons {{#Picture}} dh-left__audio-buttons--left {{/Picture}}" id="dh_left_audio_buttons">
+        <div id="word-audio-div">
+            <span id="word-audio"> {{WordAudio}} </span>
+       </div>
+        <div id="sentence-audio-div">
+                   <span id="sentence-audio"> {{SentenceAudio}} </span>
+          </div>
+    </div>
+  </div>
+
+  </div>
+
+
+
+  <div id="back_side" class="back-side">
 
 
 
@@ -826,9 +861,15 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
     <div class="glossary-primary-definition-right glossary-primary-definition-right--float" id="primary_definition_picture"><div class="glossary-primary-definition-right-img">{{PrimaryDefinitionPicture}}</div></div>
 
 
+
     <div class="glossary-text glossary-text--primary-definition" id="primary_definition_text">
+
+
+
+
       {{PrimaryDefinition}}
       <div style="font-size: 0px"><br></div>
+
       <!-- The above is a hack to allow a user to triple-click the definition
         without selecting everything below the line.
         This seems to ONLY affect the texthooker page;
@@ -845,11 +886,28 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
           {{#PrimaryDefinition}}glossary-primary-definition-right--above-text{{/PrimaryDefinition}}
           " id="primary_definition_picture_bottom">
       <div class="glossary-primary-definition-right-img">
+
         {{PrimaryDefinitionPicture}}
       </div>
     </div>
 
+
+
   </blockquote>
+
+
+  <!-- ------------------------------------------------------------------------------------------------------------------ -->
+  <div class="glossary__external-links glossary__external-links--float">
+    <a data-details="jisho.org" data-suppress-link-hover="true" href="https://jisho.org/search/{{Word}}" title="jisho.org">
+      <img data-do-not-convert="do-not-convert"
+           class="show-on-light-mode-only"
+           src="_icon_jisho_lightmode.png">
+      <img data-do-not-convert="do-not-convert"
+           class="show-on-dark-mode-only"
+           src="_icon_jisho_darkmode.png">
+    </a>
+  </div>
+
 
 
   {{#SecondaryDefinition}}
@@ -876,6 +934,7 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
       Secondary Definition
     </div>
   {{/SecondaryDefinition}}
+
 
   {{#AdditionalNotes}}
     <details class="glossary-details glossary-details--small" id="additional_notes_details">
@@ -927,10 +986,6 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
     </div>
   {{/ExtraDefinitions}}
 
-
-
-
-
     <!-- only showed if outer-display2 doesn't exist -->
     <details class="glossary-details glossary-details--small inner-display1" id="extra_info_details">
       <summary>Extra Info</summary>
@@ -944,7 +999,7 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
 
 
 
-
+    <!--
     <a data-details="jpdb.io" data-suppress-link-hover="true" href="https://jpdb.io/search?q={{text:Word}}" title="jpdb.io">
 
 
@@ -957,22 +1012,9 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
 
 
     </a>
+    -->
 
 
-
-
-    <a data-details="jisho.org" data-suppress-link-hover="true" href="https://jisho.org/search/{{Word}}" title="jisho.org">
-
-
-      <img data-do-not-convert="do-not-convert"
-           class="show-on-light-mode-only"
-           src="_icon_jisho_lightmode.png">
-      <img data-do-not-convert="do-not-convert"
-           class="show-on-dark-mode-only"
-           src="_icon_jisho_darkmode.png">
-
-
-    </a>
 
 
 
@@ -1083,6 +1125,23 @@ JPMN-COMPILE-TIME-OPTIONS-JSON:
 
 
   <div class="popup-menu" id="popup_menu"></div>
+
+
+
+
+
+
+
+
+  <br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+
+
+
+
+
+
+
 
   <script>
 

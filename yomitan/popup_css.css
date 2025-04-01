@@ -142,7 +142,7 @@ div#dictionary-entries > div.entry:nth-child(n + 2) .kanji-glyph-table > tbody >
   --dict-bg-opacity: 0.03;
 }
 .definition-item[data-dictionary^="Pixiv"] {
-  --dict-color: rgb(0, 151, 250);
+  --dict-color: rgb(0, 100, 0);
   --dict-bg-opacity: 0.03;
 }
 .definition-item[data-dictionary="漢字源"] {
@@ -427,7 +427,6 @@ div#dictionary-entries > div.entry:nth-child(n + 2) .kanji-glyph-table > tbody >
   float: left;
   line-height: 1;
   height: 1em;
-  margin-top: -2px;
 }
 
 .tag {

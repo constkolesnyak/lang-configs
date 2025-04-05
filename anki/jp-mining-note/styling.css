@@ -16,6 +16,59 @@
 
 /*======================================================*/
 
+
+#comment {
+  margin-bottom: 14px;
+  color: #C87E60 !important;
+}
+
+
+/*======================================================*/
+
+
+#display br {
+  display: block;
+}
+
+#display {
+  font-size: var(--reading-font-size);
+  margin-top: 15px;
+}
+
+
+
+/*======================================================*/
+
+#dh_left {
+  position: relative; /* anchor for absolute positioning inside */
+}
+
+#similar_words_indicators {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2; /* ensure it's above backgrounds but under tooltips if needed */
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  margin-right: 3px;
+}
+
+#similar_words_indicators .frequencies__number-inner {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+#similar_words_indicators .frequencies__dictionary-inner {
+  display: none; /* remove JPDBv2㋕ label */
+}
+
+
+
+
+/*======================================================*/
+
 #pic-audio {
   display: grid;
   grid-template-columns: 1fr auto; /* First column takes up available space, second column is auto-sized */

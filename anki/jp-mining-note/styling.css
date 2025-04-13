@@ -16,6 +16,36 @@
 
 /*======================================================*/
 
+  #cool-container {
+    position: relative;
+    width: max !important;
+    height: 216px !important;
+  }
+
+  #sentence-audio-below, #pic-above, .soundLink {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+
+  #pic-above {
+    background: rgba(255, 0, 0, 0.5);
+    z-index: 2; /* Make sure it's on top */
+    pointer-events: none; /* let clicks pass through */
+  }
+
+  #sentence-audio-below {
+    background: rgba(110, 400, 135, 0.5);
+    z-index: 1;
+    pointer-events: auto; /* receives interaction */
+  }
+
+
+
+/*
 img.dh-right__img {
   height: 210px !important;
   width: auto !important;
@@ -23,7 +53,7 @@ img.dh-right__img {
 	max-height: 999999999px !important;
   max-width: 999999999px !important;
 }
-
+*/
 
 /*======================================================*/
 

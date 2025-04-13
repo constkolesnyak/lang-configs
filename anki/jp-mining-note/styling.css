@@ -16,44 +16,36 @@
 
 /*======================================================*/
 
-  #cool-container {
-    position: relative;
-    width: max !important;
-    height: 216px !important;
-  }
+#cool-container {
+  position: relative !important;
+  width: auto !important;
+  height: 240px !important;
+  overflow: hidden !important;
+	max-width: 99999px !important;
+  margin-bottom: -30px;
+}
 
-  #sentence-audio-below, #pic-above, .soundLink {
+  #sentence-audio-below, #pic-above, .soundLink, .img {
     position: absolute !important;
-    top: 0;
-    left: 0;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
+    max-width: 99999px !important;
+    max-height: 99999px !important;
     height: 100% !important;
   }
 
 
-  #pic-above {
-    background: rgba(255, 0, 0, 0.5);
-    z-index: 2; /* Make sure it's on top */
-    pointer-events: none; /* let clicks pass through */
-  }
+#pic-above {
+  z-index: 2;
+  pointer-events: none; /* Let clicks pass through */
+}
 
   #sentence-audio-below {
-    background: rgba(110, 400, 135, 0.5);
     z-index: 1;
     pointer-events: auto; /* receives interaction */
   }
 
-
-
-/*
-img.dh-right__img {
-  height: 210px !important;
-  width: auto !important;
-  display: block;
-	max-height: 999999999px !important;
-  max-width: 999999999px !important;
-}
-*/
 
 /*======================================================*/
 

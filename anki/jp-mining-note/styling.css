@@ -16,6 +16,17 @@
 
 /*======================================================*/
 
+img.dh-right__img {
+  height: 210px !important;
+  width: auto !important;
+  display: block;
+	max-height: 999999999px !important;
+  max-width: 999999999px !important;
+}
+
+
+/*======================================================*/
+
 
 #comment {
   margin-bottom: 14px;
@@ -83,7 +94,13 @@
   grid-column: 1; /* Place in the first column */
   grid-row: 1; /* Place in the first row */
   text-align: center; /* Center content */
+
 }
+
+#word-audio-div {
+    display: none !important;
+}
+
 /*
 #sentence-audio-div {
   grid-column: 2; /* Place in the second column */
@@ -95,6 +112,7 @@
   grid-row: 2; /* Place in the second row */
 }
 */
+
 
 /*======================================================*/
 

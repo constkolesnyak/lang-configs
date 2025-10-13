@@ -23,7 +23,6 @@
   align-items: center;
 }
 
-/* Absolutely fixed image height (no surprises) */
 .card img {
   display: block !important;
   height: 280px !important;      /* <- fixed */
@@ -31,6 +30,7 @@
   max-width: 100% !important;    /* don’t overflow card */
   margin: 0.5em auto !important; /* centered */
   object-fit: contain !important;/* no cropping */
+  filter: brightness(40%) !important; /* make darker */
 }
 
 /* Mobile: slightly shorter if you like
@@ -237,4 +237,3 @@ button:active,
   border-width: 20px 0 20px 34px;
   transform: translateX(5%);
 }
-

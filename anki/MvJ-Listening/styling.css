@@ -23,6 +23,13 @@
   align-items: center;
 }
 
+/* Size */
+.replay-button svg {
+  display: block;
+  width: auto !important;
+  height: 150px !important;
+}
+
 .card img {
   display: block !important;
   height: 280px !important;      /* <- fixed */
@@ -66,13 +73,6 @@
   pointer-events: auto !important; /* ensure clicks hit the button */
 }
 
-/* Size */
-.replay-button svg {
-  display: block;
-  width: auto !important;
-  height: 150px !important;
-}
-
 /* Neutral, non-black icon colors */
 .replay-button svg circle {
   fill: #f4f4f4 !important;
@@ -96,9 +96,6 @@
 .front #snd3 {
   display: none;
 }
-
-/* Optional: smaller text on mobile */
-.mobile .card { font-size: 24px; }
 
 
 button.replay-button,
@@ -182,11 +179,6 @@ button:active,
   fill: var(--audio-muted) !important;
 }
 
-/* Optional: slightly reduce big button size on mobile */
-.mobile .replay-button svg {
-  height: 120px !important;
-}
-
 /* 1) Hide whatever triangle the SVG insists on showing */
 .replay-button svg path,
 .replay-button svg polygon,
@@ -237,3 +229,4 @@ button:active,
   border-width: 20px 0 20px 34px;
   transform: translateX(5%);
 }
+

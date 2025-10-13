@@ -1,0 +1,172 @@
+/* -------------------- PREFERENCES -------------------- */
+:root {
+  /* ---------- LAYOUT & SPACING ---------- */
+  --card-margin-top: 1em;                  /* Adds top margin to flashcard container */
+  --card-max-width: 50em;                  /* Restricts max width of card for readability */
+  --spacing-regular: 3em;                  /* Standard spacing value for padding/margins */
+  --spacing-small: 1em;                    /* Smaller spacing for mobile and compact elements */
+  --card-radius: 0.75em;                   /* Rounded corners on the card */
+  --card-padding: 1.25em;                  /* Padding inside the card */
+
+  /* ---------- ALIGNMENT ---------- */
+  --card-text-align: center;               /* Center-align content by default */
+
+  /* ---------- IMAGE DISPLAY ---------- */
+  --image-max-height: 300px;               /* Limits image height */
+  --image-max-width: 300px;                /* Limits image width */
+  --image-border-radius: 0.5em;            /* Rounded corners on images */
+  --img-transition-speed: 0.3s;            /* Animation speed for image scaling */
+  --img-hover-scale: 1.05;                 /* Slight zoom effect on hover */
+  --img-hover-glow-color: rgba(255, 255, 255, 0.3); /* Glow color on image hover */
+  --img-hover-transition-speed: 0.4s;      /* Transition time for hover effect */
+
+  /* ---------- REPLAY BUTTON SETTINGS ---------- */
+  --replay-button-size: 48px;              /* Default replay button size */
+  --replay-button-size-mobile: 35px;       /* Smaller size for mobile */
+  --replay-icon-scale: 0.6;                /* Scales the play icon inside the button */
+  --replay-icon-translate-x: 20px;         /* Horizontal position adjustment */
+  --replay-icon-translate-y: 20px;         /* Vertical position adjustment */
+  --replay-hover-scale: 1.1;               /* Slight enlarge effect on hover */
+  --replay-transition-speed: 0.3s;         /* Button animation timing */
+
+  /* ---------- DIVIDER SETTINGS ---------- */
+  --divider-thickness: 2px;
+  --divider-width: 100%;
+  --divider-margin-vertical: 1em;
+  --divider-margin-horizontal: auto;
+  --divider-bg: transparent;
+  --divider-border-style: solid;
+
+  /* ---------- THEME COLORS ---------- */
+  --theme-bg: #3f0002;                     /* Background behind the card */
+  --card-bg: #ffffff;                      /* Card background color */
+  --card-border: #DEC8C8;                  /* Card border color */
+  --card-shadow: rgba(69, 17, 17, 0.5);    /* Card shadow with transparency */
+  --divider: #DEC8C8;
+  --replay-button-bg: #F0EBEB;
+  --replay-button-stroke: #DEC8C8;
+  --replay-button-fill: #4D0505;
+}
+
+/* -------------------- CARD STYLING -------------------- */
+.card {
+  background-color: var(--theme-bg) !important;
+  cursor: default;
+  padding: var(--card-padding);
+}
+
+/* Larger padding on desktop */
+html:not(.mobile) .card {
+  padding: var(--spacing-regular);
+}
+
+/* -------------------- FLASHCARD CONTAINER -------------------- */
+.MvJ-flashcard {
+  margin: var(--card-margin-top) auto 0 auto;   /* Adds top margin and centers horizontally */
+  max-width: var(--card-max-width);
+  background-color: var(--card-bg);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 6px var(--card-shadow);
+  text-align: var(--card-text-align);
+  padding: var(--spacing-regular);
+  transition: opacity 0.4s ease;              /* QoL: smooth transition on card flip */
+  opacity: 1;
+}
+
+/* Hide Explanation Audio on the front side */
+.front .MvJ-field--ExplanationAudio {
+  visibility: hidden;
+}
+
+/* Show Explanation Audio on the back side */
+.back .MvJ-field--ExplanationAudio {
+  visibility: visible;
+}
+
+/* -------------------- DIVIDERS -------------------- */
+.MvJ-divider,
+.MvJ-divider--answer {
+  height: 0;
+  border: none;
+  border-bottom-width: var(--divider-thickness);
+  border-bottom-style: var(--divider-border-style);
+  border-bottom-color: var(--divider);
+  background-color: var(--divider-bg);
+  width: var(--divider-width);
+  margin: var(--divider-margin-vertical) var(--divider-margin-horizontal);
+}
+
+/* -------------------- IMAGE STYLES -------------------- */
+img {
+  border-radius: var(--image-border-radius);
+  display: block;
+  margin: var(--spacing-regular) auto;
+  max-width: var(--image-max-width);
+  max-height: var(--image-max-height);
+  object-fit: contain;
+  transition: transform var(--img-transition-speed), box-shadow var(--img-hover-transition-speed);
+}
+
+img:hover {
+  transform: scale(var(--img-hover-scale));
+  box-shadow: 0 0 10px var(--img-hover-glow-color);
+}
+
+/* -------------------- REPLAY BUTTON -------------------- */
+.replay-button {
+  display: inline-block;
+  margin-top: var(--spacing-small);            /* Adds spacing above replay buttons */
+}
+
+.replay-button svg {
+  width: var(--replay-button-size);
+  height: var(--replay-button-size);
+  transition: transform var(--replay-transition-speed) ease;
+}
+
+.replay-button svg circle {
+  fill: var(--replay-button-bg);
+  stroke: var(--replay-button-stroke);
+  stroke-width: 1;
+  transition: fill var(--replay-transition-speed), stroke var(--replay-transition-speed);
+}
+
+.replay-button svg path {
+  fill: var(--replay-button-fill);
+  transform: scale(var(--replay-icon-scale))
+             translate(var(--replay-icon-translate-x), var(--replay-icon-translate-y));
+}
+
+.replay-button svg:hover {
+  transform: scale(var(--replay-hover-scale));
+}
+
+/* QoL: Replay button focus outline for accessibility */
+.replay-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+}
+
+/* QoL: Fade-out effect when flipping cards (for a smoother UX) */
+.card.flipping .MvJ-flashcard {
+  opacity: 0;
+}
+
+/* -------------------- RESPONSIVE DESIGN -------------------- */
+@media (max-width: 600px) {
+  .card {
+    padding: var(--spacing-small);
+  }
+
+  .MvJ-flashcard {
+    padding: var(--spacing-small);
+    max-width: 90%;
+    margin-top: var(--spacing-small); /* Slightly reduced top margin for mobile */
+  }
+
+  .replay-button svg {
+    width: var(--replay-button-size-mobile);
+    height: var(--replay-button-size-mobile);
+  }
+}

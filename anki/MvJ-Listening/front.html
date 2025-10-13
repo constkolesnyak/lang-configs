@@ -1,0 +1,35 @@
+<div class="MvJ-flashcard">
+  <div class="MvJ-field MvJ-field--front">
+    <span id="snd1">{{Word Audio}}</span>
+    <span id="snd2">{{Sentence Audio}}</span>
+
+<script>
+(() => {
+  function getSound(id) {
+    const link = document.querySelector(`#${id} .soundLink`);
+    if (!link) return null;
+    const m = link.getAttribute("onclick")?.match(/play:([^']+)/);
+    return m ? m[1] : null;
+  }
+  function play(f) { if (f) try { pycmd("play:" + f) } catch {} }
+  function init() {
+    const file1 = getSound("snd1"),
+          file2 = getSound("snd2"),
+          file3 = getSound("snd3");
+    document.addEventListener("keydown", ev => {
+      const t = ev.target;
+      if (t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable)) return;
+      switch (ev.key.toLowerCase()) {
+        case "z": ev.preventDefault(); play(file1); break;
+        case "x": ev.preventDefault(); play(file2); break;
+        case "c": ev.preventDefault(); play(file3); break;
+      }
+    }, true);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => setTimeout(init,0));
+  } else {
+    setTimeout(init,0);
+  }
+})();
+</script>

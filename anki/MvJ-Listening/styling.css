@@ -1,6 +1,3 @@
-/* ---------- Minimal Anki Styling ---------- */
-
-/* Card basics */
 .card {
   font-family: Arial, sans-serif;
   font-size: 30px;
@@ -9,123 +6,61 @@
   text-align: center;
 }
 
-/* Simple centered container */
 .MvJ-flashcard {
-  position: relative;        /* create stacking context */
+  position: relative;
   max-width: 50em;
   margin: 1em auto 0;
-}
-
-/* Center images robustly */
-.MvJ-flashcard {
-  display: flex;               /* center children including imgs */
+  display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* Size */
-.replay-button svg {
-  display: block;
-  width: auto !important;
-  height: 150px !important;
-}
-
 .card img {
   display: block !important;
-  height: 280px !important;      /* <- fixed */
-  width: auto !important;        /* keep aspect ratio */
-  max-width: 100% !important;    /* don’t overflow card */
-  margin: 0.5em auto !important; /* centered */
-  object-fit: contain !important;/* no cropping */
-  filter: brightness(40%) !important; /* make darker */
+  width: auto !important;
+  height: 280px !important;
+  max-width: 100% !important;
+  margin: 0.5em auto !important;
+  object-fit: contain !important;
+  filter: brightness(40%) !important;
 }
 
-/* Mobile: slightly shorter if you like
-.mobile img {
-  height: 120px !important;
-  min-height: 120px !important;
-  max-height: 120px !important;
-}
-*/
-
-/* Divider */
 .MvJ-divider,
 .MvJ-divider--answer {
   border: 0;
   border-top: 2px solid #ccc;
   margin: 1em auto;
   width: 100%;
-  pointer-events: none;       /* never block clicks */
+  pointer-events: none;
 }
 
-/* --------- Replay Button: visible + definitely clickable --------- */
-.replay-button {
-  position: relative;
-  z-index: 10;                /* above everything in the card */
-  display: inline-block;
-  line-height: 0;
-  cursor: pointer;
-  background: transparent !important;
-  border: 0 !important;
-  -webkit-tap-highlight-color: transparent;
-}
-.replay-button, .replay-button * {
-  pointer-events: auto !important; /* ensure clicks hit the button */
-}
-
-/* Neutral, non-black icon colors */
-.replay-button svg circle {
-  fill: #f4f4f4 !important;
-  stroke: #999 !important;
-  stroke-width: 1.5 !important;
-}
-.replay-button svg path {
-  fill: #333 !important;      /* play triangle */
-}
-
-/* If theme uses currentColor */
-.replay-button svg,
-.replay-button svg * {
-  color: #333 !important;
-  fill-opacity: 1 !important;
-  stroke-opacity: 1 !important;
-}
-
-/* Hide Explanation audio on the front */
 .front .MvJ-field--ExplanationAudio,
 .front #snd3 {
   display: none;
 }
 
-
-button.replay-button,
-button.replay-button:focus,
-button.replay-button:focus-visible,
-button.replay-button:active {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
-}
-
 button,
 .replay-button {
+  border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  border: none !important;
   -webkit-tap-highlight-color: transparent;
 }
 
-button:focus,
-button:focus-visible,
-button:active,
-.replay-button:focus,
-.replay-button:focus-visible,
-.replay-button:active {
-  outline: none !important;
-  box-shadow: none !important;
+.replay-button {
+  position: relative;
+  z-index: 10;
+  display: inline-block;
+  line-height: 0;
+  cursor: pointer;
+  background: transparent !important;
 }
 
-/* ===== Dark audio buttons ===== */
+.replay-button,
+.replay-button * {
+  pointer-events: auto !important;
+}
+
 :root {
   --audio-bg: #161616;
   --audio-bg-hover: #1f1f1f;
@@ -135,9 +70,8 @@ button:active,
   --audio-muted: #b5b5b5;
 }
 
-/* Anki night mode class varies by build; cover both */
-.night-mode :root,
-.night_mode :root {
+.night-mode,
+.night_mode {
   --audio-bg: #0f0f0f;
   --audio-bg-hover: #171717;
   --audio-bg-active: #000000;
@@ -145,19 +79,18 @@ button:active,
   --audio-icon: #ffffff;
 }
 
-/* Base dark styling for the circular button */
+.replay-button svg {
+  display: block;
+  width: auto !important;
+  height: 150px !important;
+}
+
 .replay-button svg circle {
   fill: var(--audio-bg) !important;
   stroke: var(--audio-border) !important;
   stroke-width: 1.8 !important;
 }
 
-/* Play triangle (or speaker glyph) */
-.replay-button svg path {
-  fill: var(--audio-icon) !important;
-}
-
-/* If the SVG uses currentColor anywhere */
 .replay-button svg,
 .replay-button svg * {
   color: var(--audio-icon) !important;
@@ -165,68 +98,50 @@ button:active,
   stroke-opacity: 1 !important;
 }
 
-/* Hover / active feedback */
-.replay-button:hover svg circle {
-  fill: var(--audio-bg-hover) !important;
-}
-.replay-button:active svg circle {
-  fill: var(--audio-bg-active) !important;
-}
-
-/* Disabled/muted look (if you toggle a disabled class) */
-.replay-button[disabled] svg path,
-.replay-button.is-muted svg path {
-  fill: var(--audio-muted) !important;
-}
-
-/* 1) Hide whatever triangle the SVG insists on showing */
+/* Hide baked-in glyphs so the pseudo triangle controls the icon */
 .replay-button svg path,
 .replay-button svg polygon,
 .replay-button svg g [fill],
 .replay-button svg [style*="fill"] {
-  opacity: 0 !important; /* make the baked-in white glyph invisible */
-}
-
-/* 2) Draw our own triangle with a pseudo-element */
-.replay-button {
-  position: relative;        /* anchor for the ::after triangle */
+  opacity: 0 !important;
 }
 
 .replay-button::after {
   content: "";
   position: absolute;
-  inset: 0;                  /* center inside the circle */
+  inset: 0;
   margin: auto;
-  pointer-events: none;
-
-  /* Triangle sized for your current 150px SVG height */
   width: 0;
   height: 0;
+  pointer-events: none;
   border-style: solid;
-  border-width: 26px 0 26px 42px;   /* top right bottom left */
+  border-width: 26px 0 26px 42px;
   border-color: transparent transparent transparent var(--audio-icon, #1a1a1a);
-
-  /* Nudge slightly right so it feels visually centered */
   transform: translateX(6%);
 }
 
-/* Hover/press feedback (match your circle’s hover/active if you like) */
+.replay-button:hover svg circle {
+  fill: var(--audio-bg-hover) !important;
+}
+
+.replay-button:active svg circle {
+  fill: var(--audio-bg-active) !important;
+}
+
 .replay-button:hover::after {
   border-left-color: var(--audio-icon, #eaeaea);
 }
+
 .replay-button:active::after {
   border-left-color: var(--audio-icon, #cfcfcf);
 }
 
-/* Night mode: lighter triangle for contrast */
+.replay-button[disabled]::after,
+.replay-button.is-muted::after {
+  border-left-color: var(--audio-muted);
+}
+
 .night-mode .replay-button::after,
 .night_mode .replay-button::after {
   border-left-color: #000000;
 }
-
-/* Mobile size tweak (you set SVG to 120px there) */
-.mobile .replay-button::after {
-  border-width: 20px 0 20px 34px;
-  transform: translateX(5%);
-}
-

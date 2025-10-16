@@ -63,8 +63,8 @@ button,
 
 :root {
   --audio-bg: #161616;
-  --audio-bg-hover: #1f1f1f;
-  --audio-bg-active: #0d0d0d;
+  --audio-bg-hover: #161616;
+  --audio-bg-active: #161616;
   --audio-border: #2b2b2b;
   --audio-icon: #ffffff;
   --audio-muted: #b5b5b5;
@@ -73,8 +73,8 @@ button,
 .night-mode,
 .night_mode {
   --audio-bg: #0f0f0f;
-  --audio-bg-hover: #171717;
-  --audio-bg-active: #000000;
+  --audio-bg-hover: #0f0f0f;
+  --audio-bg-active: #0f0f0f;
   --audio-border: #222222;
   --audio-icon: #ffffff;
 }
@@ -120,20 +120,14 @@ button,
   transform: translateX(6%);
 }
 
-.replay-button:hover svg circle {
-  fill: var(--audio-bg-hover) !important;
-}
-
+.replay-button:hover svg circle,
 .replay-button:active svg circle {
-  fill: var(--audio-bg-active) !important;
+  fill: var(--audio-bg) !important;
 }
 
-.replay-button:hover::after {
-  border-left-color: var(--audio-icon, #eaeaea);
-}
-
+.replay-button:hover::after,
 .replay-button:active::after {
-  border-left-color: var(--audio-icon, #cfcfcf);
+  border-left-color: var(--audio-icon, #1a1a1a);
 }
 
 .replay-button[disabled]::after,

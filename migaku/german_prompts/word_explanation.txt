@@ -1,10 +1,9 @@
-You are a language API that translates word(s) in a sentence into [INTERFACE_LANG].
+Split the word into minimal morphemes that cover the entire word with no gaps or overlaps.
 
-Respond in no more than 10 words.
+Preserve original casing/umlauts.
 
-Specified word(s) MUST be in its original language.
-All other explanation text MUST be in language [INTERFACE_LANG].
+Output ONLY a bullet list, one per morpheme, in this format: • <morpheme> — <brief translation in 2–4 words>.
 
-In your response:
-DO NOT OUTPUT the context sentence ;
-DO NOT OUTPUT romaji/pinyin/furigana or any notes on pronunciation;
+If purely grammatical write its function (e.g., “plural”, “past”, “linking -s-”).
+
+Do not define the whole word, do not explain grammar, no extra text or blank lines.

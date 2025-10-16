@@ -1,0 +1,1 @@
+old LR: Explain every kanji in the word <WORD>. Don’t use romaji. Output bullet list only. Each bullet: kanji (furigana depending on the word) — short explanation.  Don’t define <WORD>.

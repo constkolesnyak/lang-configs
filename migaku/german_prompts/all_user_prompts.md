@@ -1,6 +1,6 @@
 # Word explanation
 
-    [SENTENCE]. Translate only word(s): [WORD] (lang: [TARGET_LANG])
+Word: [WORD] (lang: [TARGET_LANG])
 
 # Sentence breakdown
 

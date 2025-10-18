@@ -1,8 +1,46 @@
+/* ==================== Theme ==================== */
+/* Light theme */
+:root {
+  --card-bg: #ffffff;
+  --card-fg: #000000;
+  --divider-color: #cccccc;
+  --image-brightness: 100%;
+
+  --audio-bg: #f0f0f0;
+  --audio-bg-hover: #e4e4e4;
+  --audio-bg-active: #dadada;
+  --audio-border: #c0c0c0;
+  --audio-icon: #161616;
+  --audio-muted: #9a9a9a;
+}
+
+/* Dark theme */
+.night-mode,
+.night_mode {
+  --card-bg: #101010;
+  --card-fg: #f3f3f3;
+  --divider-color: #2f2f2f;
+  --image-brightness: 40%;
+
+  --audio-bg: #0f0f0f;
+  --audio-bg-hover: #0f0f0f;
+  --audio-bg-active: #0f0f0f;
+  --audio-border: #222222;
+  --audio-icon: #ffffff;
+}
+
+
+/* ==================== Base Layout ==================== */
+body {
+  color: var(--card-fg);
+  background-color: var(--card-bg);
+}
+
 .card {
   font-family: Arial, sans-serif;
   font-size: 30px;
-  color: #000;
-  background-color: #fff;
+  color: var(--card-fg);
+  background-color: var(--card-bg);
   text-align: center;
 }
 
@@ -15,6 +53,8 @@
   align-items: center;
 }
 
+
+/* ==================== Image ==================== */
 .card img {
   display: block !important;
   width: auto !important;
@@ -22,13 +62,15 @@
   max-width: 100% !important;
   margin: 0.5em auto !important;
   object-fit: contain !important;
-  filter: brightness(40%) !important;
+  filter: brightness(var(--image-brightness)) !important;
 }
 
+
+/* ==================== Utilities ==================== */
 .MvJ-divider,
 .MvJ-divider--answer {
   border: 0;
-  border-top: 2px solid #ccc;
+  border-top: 2px solid var(--divider-color);
   margin: 1em auto;
   width: 100%;
   pointer-events: none;
@@ -39,6 +81,8 @@
   display: none;
 }
 
+
+/* ==================== Audio ==================== */
 button,
 .replay-button {
   border: none !important;
@@ -61,24 +105,6 @@ button,
   pointer-events: auto !important;
 }
 
-:root {
-  --audio-bg: #161616;
-  --audio-bg-hover: #161616;
-  --audio-bg-active: #161616;
-  --audio-border: #2b2b2b;
-  --audio-icon: #ffffff;
-  --audio-muted: #b5b5b5;
-}
-
-.night-mode,
-.night_mode {
-  --audio-bg: #0f0f0f;
-  --audio-bg-hover: #0f0f0f;
-  --audio-bg-active: #0f0f0f;
-  --audio-border: #222222;
-  --audio-icon: #ffffff;
-}
-
 .replay-button svg {
   display: block;
   width: auto !important;
@@ -98,7 +124,6 @@ button,
   stroke-opacity: 1 !important;
 }
 
-/* Hide baked-in glyphs so the pseudo triangle controls the icon */
 .replay-button svg path,
 .replay-button svg polygon,
 .replay-button svg g [fill],
@@ -122,7 +147,7 @@ button,
 
 .replay-button:hover svg circle,
 .replay-button:active svg circle {
-  fill: var(--audio-bg) !important;
+  fill: var(--audio-bg-hover) !important;
 }
 
 .replay-button:hover::after,

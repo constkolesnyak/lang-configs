@@ -15,7 +15,7 @@
 
     // ---- Tunables ----
     // For how long after "i" we neutralize pause calls.
-    const WINDOW_MS = 600;
+    const WINDOW_MS = 1200;
 
     // Which video counts as "main"? We’ll pick the largest visible one.
     function pickMainVideo() {

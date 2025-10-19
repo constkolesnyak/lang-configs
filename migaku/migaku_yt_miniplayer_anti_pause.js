@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         YouTube i-key Anti-Pause (Migaku canceller)
-// @namespace    constk.yt.antipause
-// @version      1.0
-// @description  When pressing "i" (miniplayer toggle) on YouTube, Migaku pauses; this replays if the video was playing before, so two pauses cancel out.
+// @name         YouTube i-key Anti-Pause (Prototype-level canceller)
+// @namespace    constk.yt.antipause.v2
+// @version      2.0
+// @description  Cancels Migaku's pause when pressing "i" for miniplayer by neutralizing pause calls within a short window, only if the video was playing before the keypress.
 // @match        https://www.youtube.com/*
 // @match        https://youtu.be/*
 // @run-at       document-start
@@ -11,97 +11,147 @@
 // ==/UserScript==
 
 (function () {
-  "use strict";
+    'use strict';
 
-  // --- config ---
-  // Small delay lets other handlers (incl. Migaku) run first; tweak if needed.
-  const AFTER_KEY_DELAY_MS = 60;
+    // ---- Tunables ----
+    // For how long after "i" we neutralize pause calls.
+    const WINDOW_MS = 600;
 
-  // Ignore key events when user is typing/caret is in an input-ish element.
-  function isEditable(target) {
-    if (!target) return false;
-    const tag = (target.tagName || "").toLowerCase();
-    const editableTags = new Set(["input", "textarea", "select"]);
-    if (editableTags.has(tag)) return true;
-    if (target.isContentEditable) return true;
-    // Also ignore when focused inside a shadow root editor (e.g. comment box)
-    const root = target.getRootNode && target.getRootNode();
-    return !!(root && root.host && root.host.isContentEditable);
-  }
+    // Which video counts as "main"? We’ll pick the largest visible one.
+    function pickMainVideo() {
+        const videos = Array.from(document.querySelectorAll('video'));
+        if (!videos.length) return null;
+        const score = (v) => {
+            const r = v.getBoundingClientRect();
+            const area = Math.max(0, r.width) * Math.max(0, r.height);
+            const visible =
+                area > 0 &&
+                r.bottom > 0 &&
+                r.right > 0 &&
+                r.left < (window.innerWidth || 0) &&
+                r.top < (window.innerHeight || 0);
+            let s = area;
+            if (visible) s += 1e6;
+            if (!v.paused) s += 5e5;
+            if (v.readyState >= 2) s += 2e5;
+            return s;
+        };
+        return videos.sort((a, b) => score(b) - score(a))[0] || null;
+    }
 
-  function isBareIKey(e) {
-    // YouTube uses lowercase 'i' in KeyboardEvent.key
-    return (
-      typeof e.key === "string" &&
-      e.key.toLowerCase() === "i" &&
-      !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+    function isEditable(target) {
+        if (!target) return false;
+        const tag = (target.tagName || '').toLowerCase();
+        if (target.isContentEditable) return true;
+        if (tag === 'input' || tag === 'textarea' || tag === 'select')
+            return true;
+        const root = target.getRootNode && target.getRootNode();
+        return !!(root && root.host && root.host.isContentEditable);
+    }
+
+    function isBareIKey(e) {
+        return (
+            typeof e.key === 'string' &&
+            e.key.toLowerCase() === 'i' &&
+            !e.altKey &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            !e.shiftKey
+        );
+    }
+
+    // ---- State for one-shot protection window ----
+    let windowUntil = 0; // timestamp when protection window ends
+    let trackedVideo = null; // the main video at keypress
+    let lastWasPlaying = false; // snapshot: was it playing before key press?
+
+    // Snapshot state on keydown BEFORE others run
+    window.addEventListener(
+        'keydown',
+        (e) => {
+            if (!isBareIKey(e) || isEditable(e.target)) return;
+            const v = pickMainVideo();
+            if (!v) return;
+            trackedVideo = v;
+            lastWasPlaying = !v.paused;
+            windowUntil = performance.now() + WINDOW_MS;
+        },
+        true
+    ); // capture to beat other listeners for snapshot
+
+    // ---- Prototype-level cancel: neutralize pause during window ----
+    const NativePause = HTMLMediaElement.prototype.pause;
+    const NativePlay = HTMLMediaElement.prototype.play;
+
+    function shouldNeutralizePauseOn(el) {
+        // Only during window, for the same tracked video, and only if it was playing before
+        if (!el || el !== trackedVideo) return false;
+        if (performance.now() > windowUntil) return false;
+        if (!lastWasPlaying) return false;
+        return true;
+    }
+
+    Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+        configurable: true,
+        enumerable: false,
+        writable: true,
+        value: function patchedPause() {
+            // Let pause happen, but if we’re in the protection window, immediately play again.
+            const el = this;
+            const inWindow = shouldNeutralizePauseOn(el);
+
+            // Call native pause first so we don't break miniplayer transitions that expect a pause moment.
+            try {
+                return NativePause.apply(el, arguments);
+            } finally {
+                if (inWindow) {
+                    // Queue a microtask to restore playback reliably, still within the same user gesture context.
+                    Promise.resolve().then(() => {
+                        try {
+                            if (el.paused) {
+                                const p = NativePlay.call(el);
+                                if (p && typeof p.catch === 'function')
+                                    p.catch(() => {});
+                            }
+                        } catch {}
+                    });
+                }
+            }
+        },
+    });
+
+    // ---- Event-level safety net: resume on 'pause' event during window ----
+    // Some players might not use HTMLMediaElement.pause directly (rare), so we also listen to the event.
+    document.addEventListener(
+        'pause',
+        (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLMediaElement)) return;
+            if (!shouldNeutralizePauseOn(el)) return;
+            // One more attempt to play if still paused
+            try {
+                if (el.paused) {
+                    const p = el.play();
+                    if (p && typeof p.catch === 'function') p.catch(() => {});
+                }
+            } catch {}
+        },
+        true
     );
-  }
 
-  function pickMainVideo() {
-    const videos = Array.from(document.querySelectorAll("video"));
-    if (!videos.length) return null;
+    // ---- Keep listeners on the current main video as it changes (YouTube swaps video elements) ----
+    // We don’t need per-video listeners because the prototype patch + capture listener handles it,
+    // but we *do* want trackedVideo to always be the main one at the moment of keypress.
+    // Our pickMainVideo() call on keydown already does this; nothing else needed here.
 
-    // Prefer playing/ready & visible & largest area
-    const score = v => {
-      const rect = v.getBoundingClientRect();
-      const area = Math.max(0, rect.width) * Math.max(0, rect.height);
-      const visible = area > 0 && rect.bottom > 0 && rect.right > 0 &&
-                      rect.left < (window.innerWidth || 0) &&
-                      rect.top < (window.innerHeight || 0);
-      let s = area;
-      if (visible) s += 1e6;
-      if (!v.paused) s += 5e5;
-      if (v.readyState >= 2) s += 2e5;
-      return s;
-    };
-
-    return videos.sort((a,b) => score(b) - score(a))[0] || null;
-  }
-
-  // Track “was playing before the keypress”
-  let lastWasPlaying = false;
-
-  // Keydown first: capture playing state before Migaku/YouTube act
-  window.addEventListener("keydown", (e) => {
-    if (!isBareIKey(e) || isEditable(e.target)) return;
-    const v = pickMainVideo();
-    if (!v) return;
-    lastWasPlaying = !v.paused; // true if it was playing right before "i"
-    // Do NOT preventDefault — we want YT miniplayer toggle to still happen
-  }, true); // capture to beat other listeners for the *snapshot* only
-
-  // Keyup (or keydown again with a timeout) to restore play if Migaku paused it
-  window.addEventListener("keyup", (e) => {
-    if (!isBareIKey(e) || isEditable(e.target)) return;
-
-    // Wait a tick so Migaku/YouTube handlers finish (Migaku pause happens fast)
-    setTimeout(() => {
-      const v = pickMainVideo();
-      if (!v) return;
-
-      // If it was playing before and is now paused, resume to cancel the pause.
-      if (lastWasPlaying && v.paused) {
-        // Some players need a direct call; ignore errors quietly.
-        const p = v.play();
-        if (p && typeof p.catch === "function") {
-          p.catch(() => {/* ignore autoplay restrictions */});
+    // ---- Optional: clear stale window if user navigates or player swaps ----
+    const clearIfGone = () => {
+        if (trackedVideo && !trackedVideo.isConnected) {
+            trackedVideo = null;
+            lastWasPlaying = false;
+            windowUntil = 0;
         }
-      }
-    }, AFTER_KEY_DELAY_MS);
-  }, false);
-
-  // Also cover the case where sites only listen to keydown
-  window.addEventListener("keydown", (e) => {
-    if (!isBareIKey(e) || isEditable(e.target)) return;
-    setTimeout(() => {
-      const v = pickMainVideo();
-      if (!v) return;
-      if (lastWasPlaying && v.paused) {
-        const p = v.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      }
-    }, AFTER_KEY_DELAY_MS);
-  }, false);
-
+    };
+    const mo = new MutationObserver(clearIfGone);
+    mo.observe(document.documentElement, { childList: true, subtree: true });
 })();

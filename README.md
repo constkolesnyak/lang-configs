@@ -1,1 +1,1 @@
-# lang_configs
+# lang-configs

@@ -63,7 +63,7 @@ body {
   margin: 0.5em auto !important;
   object-fit: contain !important;
   filter: brightness(var(--image-brightness)) !important;
-  padding-bottom: 100px;
+  padding-bottom: 60px;
 }
 
 

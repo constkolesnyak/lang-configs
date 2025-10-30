@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YouTube i-key Anti-Pause
+// @name         Anti-Pause YouTube
 // @namespace    constk.yt.antipause.v3
 // @version      3.0
 // @description  Keep playback running when pressing "i" for miniplayer if the video was playing before. Neutralizes pause during a short window.
@@ -153,6 +153,54 @@
             if (!inProtectionWindowFor(el)) return;
             safePlay(el);
             playBurst(el);
+        },
+        true
+    );
+
+    // ---- Auto-unpause on playlist transitions ----
+    let shouldAutoPlay = false;
+    let autoPlayTimeout = null;
+
+    // When a video ends naturally, mark that we want autoplay
+    document.addEventListener(
+        'ended',
+        (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLMediaElement)) return;
+            shouldAutoPlay = true;
+            // Clear flag after 5 seconds if nothing happens
+            clearTimeout(autoPlayTimeout);
+            autoPlayTimeout = setTimeout(() => {
+                shouldAutoPlay = false;
+            }, 5000);
+        },
+        true
+    );
+
+    // When the next video is ready to play, unpause it if we're in autoplay mode
+    document.addEventListener(
+        'canplay',
+        (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLMediaElement)) return;
+            if (shouldAutoPlay && el.paused) {
+                safePlay(el);
+                playBurst(el);
+            }
+        },
+        true
+    );
+
+    // Clear the flag when video actually starts playing
+    document.addEventListener(
+        'playing',
+        (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLMediaElement)) return;
+            if (shouldAutoPlay && !el.paused) {
+                shouldAutoPlay = false;
+                clearTimeout(autoPlayTimeout);
+            }
         },
         true
     );

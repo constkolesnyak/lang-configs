@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         YouTube i-key Anti-Pause (resilient)
+// @name         YouTube i-key Anti-Pause
 // @namespace    constk.yt.antipause.v3
 // @version      3.0
 // @description  Keep playback running when pressing "i" for miniplayer if the video was playing before. Neutralizes pause during a short window.

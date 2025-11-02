@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Anti-Pause YouTube
 // @namespace    constk.yt.antipause.v3
-// @version      3.0
-// @description  Keep playback running when pressing "i" for miniplayer if the video was playing before. Neutralizes pause during a short window.
+// @version      3.2
+// @description  .
 // @match        https://www.youtube.com/*
 // @match        https://youtu.be/*
 // @run-at       document-start
@@ -14,9 +14,10 @@
     'use strict';
 
     // ---- Tunables ----
-    const WINDOW_MS = 1500; // how long after 'i' we neutralize pauses
-    const BURST_MS = 250; // extra retry burst length after a pause
-    const BURST_STEPS = [0, 16, 48, 96, 160, 240]; // ms offsets for retries
+    const WINDOW_MS = 2500; // main protection window after 'i'
+    const MICRO_EXTEND_MS = 400; // extend window slightly when a late pause is seen
+    const BURST_STEPS = [0, 16, 48, 96, 160, 240, 320, 480];
+    const GUARD_INTERVAL_MS = 50; // interval guard cadence
 
     // ---- Utils ----
     const now = () => performance.now();
@@ -24,8 +25,8 @@
     function pickMainVideo() {
         const vids = Array.from(document.querySelectorAll('video'));
         if (!vids.length) return null;
-        const w = window.innerWidth || 0,
-            h = window.innerHeight || 0;
+        const w = innerWidth || 0,
+            h = innerHeight || 0;
         const score = (v) => {
             const r = v.getBoundingClientRect();
             const area = Math.max(0, r.width) * Math.max(0, r.height);
@@ -44,13 +45,13 @@
         return vids.sort((a, b) => score(b) - score(a))[0] || null;
     }
 
-    function isEditable(target) {
-        if (!target) return false;
-        const tag = (target.tagName || '').toLowerCase();
-        if (target.isContentEditable) return true;
+    function isEditable(t) {
+        if (!t) return false;
+        const tag = (t.tagName || '').toLowerCase();
+        if (t.isContentEditable) return true;
         if (tag === 'input' || tag === 'textarea' || tag === 'select')
             return true;
-        const root = target.getRootNode && target.getRootNode();
+        const root = t.getRootNode && t.getRootNode();
         return !!(root && root.host && root.host.isContentEditable);
     }
 
@@ -70,37 +71,18 @@
     let trackedVideo = null;
     let lastWasPlaying = false;
 
-    // Snapshot BEFORE others (capture)
-    window.addEventListener(
-        'keydown',
-        (e) => {
-            if (!isBareIKey(e) || isEditable(e.target)) return;
-            const v = pickMainVideo();
-            if (!v) return;
-            trackedVideo = v;
-            lastWasPlaying = !v.paused;
-            windowUntil = now() + WINDOW_MS;
-        },
-        true
-    );
+    // Guards
+    let guardInterval = null;
+    let guardRAFActive = false;
 
-    // ---- Robust play() attempts ----
-    function safePlay(el) {
-        try {
-            const p = el.play();
-            if (p && typeof p.catch === 'function') p.catch(() => {});
-        } catch {}
-    }
+    // Native refs
+    const NativePause = HTMLMediaElement.prototype.pause;
+    const NativePlay = HTMLMediaElement.prototype.play;
+    const NativeAddEv = HTMLMediaElement.prototype.addEventListener;
+    const NativeRemEv = HTMLMediaElement.prototype.removeEventListener;
 
-    function playBurst(el) {
-        // rAF first (keeps user-gesture-ish timing tighter), then staggered timeouts
-        try {
-            requestAnimationFrame(() => safePlay(el));
-        } catch {}
-        BURST_STEPS.forEach((ms) => setTimeout(() => safePlay(el), ms));
-    }
-
-    function inProtectionWindowFor(el) {
+    // ---- Core helpers ----
+    function inWindowFor(el) {
         return !!(
             el &&
             el === trackedVideo &&
@@ -109,29 +91,106 @@
         );
     }
 
-    // ---- Patch pause() early + make hard to clobber ----
-    const NativePause = HTMLMediaElement.prototype.pause;
-    const NativePlay = HTMLMediaElement.prototype.play;
+    function extendWindow(ms) {
+        windowUntil = Math.max(windowUntil, now() + ms);
+    }
 
+    function safePlay(el) {
+        try {
+            const p = NativePlay.call(el);
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch {}
+    }
+
+    function playBurst(el) {
+        try {
+            requestAnimationFrame(() => safePlay(el));
+        } catch {}
+        BURST_STEPS.forEach((ms) => setTimeout(() => safePlay(el), ms));
+    }
+
+    function kickIfPaused(el) {
+        if (!el) return;
+        if (!inWindowFor(el)) return;
+        if (el.paused) {
+            safePlay(el);
+            // tiny extend to catch cascaded pauses coming right after
+            extendWindow(MICRO_EXTEND_MS);
+        }
+    }
+
+    function startGuards() {
+        stopGuards();
+        // Interval guard
+        guardInterval = setInterval(() => {
+            if (!trackedVideo || now() > windowUntil) {
+                stopGuards();
+                return;
+            }
+            kickIfPaused(trackedVideo);
+        }, GUARD_INTERVAL_MS);
+
+        // Frame guard (rAF each frame)
+        guardRAFActive = true;
+        const loop = () => {
+            if (!guardRAFActive) return;
+            if (!trackedVideo || now() > windowUntil) {
+                stopGuards();
+                return;
+            }
+            kickIfPaused(trackedVideo);
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
+    function stopGuards() {
+        if (guardInterval) {
+            clearInterval(guardInterval);
+            guardInterval = null;
+        }
+        guardRAFActive = false;
+    }
+
+    // ---- Capture snapshot BEFORE site handlers ----
+    addEventListener(
+        'keydown',
+        (e) => {
+            if (!isBareIKey(e) || isEditable(e.target)) return;
+            const v = pickMainVideo();
+            if (!v) return;
+            trackedVideo = v;
+            lastWasPlaying = !v.paused;
+            windowUntil = now() + WINDOW_MS;
+            if (lastWasPlaying) {
+                startGuards();
+            } else {
+                // If it wasn't playing, no protection window
+                stopGuards();
+            }
+        },
+        true
+    );
+
+    // ---- Monkey-patch pause() so we can immediately re-assert play ----
     function patchedPause() {
         const el = this;
-        const protect = inProtectionWindowFor(el);
-
-        // Call native pause so YouTube's miniplayer transition logic still sees a pause moment.
+        const protect = inWindowFor(el);
         const ret = NativePause.apply(el, arguments);
-
         if (protect) {
-            // Try immediately and then a brief burst to race any late pausers.
-            safePlay(el);
-            playBurst(el);
-            // Extend a tiny sub-window so late calls inside the same gesture still get covered.
-            windowUntil = Math.max(windowUntil, now() + BURST_MS);
+            // Re-assert after native pause & after any microtasks queued by their pause handlers
+            Promise.resolve().then(() => {
+                kickIfPaused(el);
+                playBurst(el);
+            });
+            // And once more a tick later
+            setTimeout(() => {
+                kickIfPaused(el);
+            }, 0);
+            extendWindow(MICRO_EXTEND_MS);
         }
         return ret;
     }
-
-    // Define once, non-configurable & non-writable so other scripts can't replace it later.
-    // (They can still keep a cached reference, but most don't.)
     try {
         Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
             value: patchedPause,
@@ -140,82 +199,146 @@
             writable: false,
         });
     } catch {
-        // Fallback if engine disallows; at least assign (might be overwritten later).
         HTMLMediaElement.prototype.pause = patchedPause;
     }
 
-    // ---- Event-level safety net ----
-    document.addEventListener(
+    // ---- Wrap addEventListener on media elements for late pause-like events ----
+    const REPLAY_TYPES = new Set(['pause', 'suspend', 'stalled', 'waiting']);
+    const WRAPPED = new WeakMap(); // el -> Map<original, wrapped> per type
+    function getMap(el) {
+        let m = WRAPPED.get(el);
+        if (!m) {
+            m = new Map();
+            WRAPPED.set(el, m);
+        }
+        return m;
+    }
+
+    function makeWrapped(el, type, original, opts) {
+        const wrapped = function () {
+            // Run their handler first
+            try {
+                return original.apply(this, arguments);
+            } finally {
+                if (inWindowFor(el)) {
+                    // After their handler completes, re-assert play
+                    Promise.resolve().then(() => kickIfPaused(el));
+                    setTimeout(() => kickIfPaused(el), 0);
+                }
+            }
+        };
+        // For removeEventListener to work, we need to keep the mapping
+        const key =
+            type +
+            '|' +
+            (opts && typeof opts === 'object'
+                ? JSON.stringify({
+                      capture: !!opts.capture,
+                      passive: !!opts.passive,
+                      once: !!opts.once,
+                  })
+                : String(!!opts));
+        const map = getMap(el);
+        const byType = map.get(key) || new Map();
+        byType.set(original, wrapped);
+        map.set(key, byType);
+        return wrapped;
+    }
+
+    function lookupWrapped(el, type, original, opts) {
+        const key =
+            type +
+            '|' +
+            (opts && typeof opts === 'object'
+                ? JSON.stringify({
+                      capture: !!opts.capture,
+                      passive: !!opts.passive,
+                      once: !!opts.once,
+                  })
+                : String(!!opts));
+        const map = getMap(el).get(key);
+        return map && map.get(original);
+    }
+
+    HTMLMediaElement.prototype.addEventListener = function (
+        type,
+        listener,
+        opts
+    ) {
+        if (REPLAY_TYPES.has(String(type))) {
+            const wrapped = makeWrapped(this, String(type), listener, opts);
+            return NativeAddEv.call(this, type, wrapped, opts);
+        }
+        return NativeAddEv.call(this, type, listener, opts);
+    };
+
+    HTMLMediaElement.prototype.removeEventListener = function (
+        type,
+        listener,
+        opts
+    ) {
+        if (REPLAY_TYPES.has(String(type))) {
+            const wrapped = lookupWrapped(this, String(type), listener, opts);
+            if (wrapped) {
+                return NativeRemEv.call(this, type, wrapped, opts);
+            }
+        }
+        return NativeRemEv.call(this, type, listener, opts);
+    };
+
+    // ---- Event-level nets ----
+    addEventListener(
         'pause',
         (e) => {
             const el = e.target;
-            if (!(el instanceof HTMLMediaElement)) return;
-            if (!inProtectionWindowFor(el)) return;
-            safePlay(el);
-            playBurst(el);
-        },
-        true
-    );
-
-    // ---- Auto-unpause on playlist transitions ----
-    let shouldAutoPlay = false;
-    let autoPlayTimeout = null;
-
-    // When a video ends naturally, mark that we want autoplay
-    document.addEventListener(
-        'ended',
-        (e) => {
-            const el = e.target;
-            if (!(el instanceof HTMLMediaElement)) return;
-            shouldAutoPlay = true;
-            // Clear flag after 5 seconds if nothing happens
-            clearTimeout(autoPlayTimeout);
-            autoPlayTimeout = setTimeout(() => {
-                shouldAutoPlay = false;
-            }, 5000);
-        },
-        true
-    );
-
-    // When the next video is ready to play, unpause it if we're in autoplay mode
-    document.addEventListener(
-        'canplay',
-        (e) => {
-            const el = e.target;
-            if (!(el instanceof HTMLMediaElement)) return;
-            if (shouldAutoPlay && el.paused) {
-                safePlay(el);
-                playBurst(el);
+            if (el instanceof HTMLMediaElement && inWindowFor(el)) {
+                // Let it bubble, then fix
+                Promise.resolve().then(() => {
+                    kickIfPaused(el);
+                    playBurst(el);
+                });
             }
         },
         true
     );
 
-    // Clear the flag when video actually starts playing
-    document.addEventListener(
-        'playing',
-        (e) => {
-            const el = e.target;
-            if (!(el instanceof HTMLMediaElement)) return;
-            if (shouldAutoPlay && !el.paused) {
-                shouldAutoPlay = false;
-                clearTimeout(autoPlayTimeout);
-            }
-        },
-        true
-    );
+    // Media pipeline reloads / transitions
+    ['emptied', 'loadedmetadata', 'canplay'].forEach((type) => {
+        addEventListener(
+            type,
+            (e) => {
+                const el = e.target;
+                if (!(el instanceof HTMLMediaElement)) return;
+                if (!inWindowFor(el)) return;
+                // Slight delay to let the element become playable
+                setTimeout(() => {
+                    kickIfPaused(el);
+                }, 10);
+            },
+            true
+        );
+    });
 
-    // ---- Clean up stale tracked video on SPA swaps ----
-    const clearIfGone = () => {
+    // ---- SPA housekeeping ----
+    function clearIfGone() {
         if (trackedVideo && !trackedVideo.isConnected) {
             trackedVideo = null;
             lastWasPlaying = false;
             windowUntil = 0;
+            stopGuards();
         }
-    };
-    const mo = new MutationObserver(clearIfGone);
-    mo.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    new MutationObserver(clearIfGone).observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+    });
+    addEventListener('yt-navigate-finish', clearIfGone, true);
 
-    // Also clear on yt-navigate
-    window.addEventListener('yt-navigate-finish', clearIfGone, true);
+    addEventListener(
+        'visibilitychange',
+        () => {
+            if (document.hidden) stopGuards();
+        },
+        true
+    );
 })();

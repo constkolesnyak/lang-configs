@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Anti-Pause YouTube (aggressive + playlist continuity)
+// @name         Anti-Pause YouTube
 // @namespace    constk.yt.antipause.v3
-// @version      3.3
-// @description  Prevents unwanted pauses (miniplayer + playlist). Re-asserts play during protected windows, wraps pause listeners, guards across SPA/playlist handoffs.
+// @version      3.5
+// @description  No-op pause() during 'i' and handoffs. Works in all views (default/theater/fullscreen/miniplayer). Also guards playlist/SPA handoffs.
 // @match        https://www.youtube.com/*
 // @match        https://youtu.be/*
 // @run-at       document-start
@@ -14,21 +14,45 @@
     'use strict';
 
     // ---- Tunables ----
-    const MINIPLAYER_WINDOW_MS = 2500; // after 'i'
-    const MICRO_EXTEND_MS = 400; // extend on detected late pause
-    const PLAYLIST_HANDOFF_MS = 7000; // protection window after playlist/queue handoff
-    const BURST_STEPS = [0, 16, 48, 96, 160, 240, 320, 480];
-    const GUARD_INTERVAL_MS = 50;
+    const MINIPLAYER_WINDOW_MS = 2500; // coverage after 'i'
+    const MICRO_EXTEND_MS = 400;
+    const PLAYLIST_HANDOFF_MS = 7000;
+    const GUARD_INTERVAL_MS = 40;
+    const BURST_STEPS = [0, 16, 32, 64, 96, 160, 240, 360, 480, 640];
+    const I_COMBO_GRACE_MS = 240; // presses within this merge
+    const POST_KEY_KICKS_MS = [0, 24, 48, 96, 160, 240];
 
     // ---- Utils ----
     const now = () => performance.now();
+    const isEditable = (t) => {
+        if (!t) return false;
+        const tag = (t.tagName || '').toLowerCase();
+        if (t.isContentEditable) return true;
+        if (tag === 'input' || tag === 'textarea' || tag === 'select')
+            return true;
+        const root = t.getRootNode && t.getRootNode();
+        return !!(root && root.host && root.host.isContentEditable);
+    };
+    const isBareIKey = (e) =>
+        typeof e.key === 'string' &&
+        e.key.toLowerCase() === 'i' &&
+        !e.altKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.shiftKey;
 
     function pickMainVideo() {
+        // Prefer the main player if present; otherwise best visible
+        const prefer = document.querySelector(
+            'video.html5-main-video, #movie_player video, ytd-player video'
+        );
+        if (prefer) return prefer;
         const vids = Array.from(document.querySelectorAll('video'));
-        if (!vids.length) return null;
+        let best = null,
+            bestScore = -1;
         const w = innerWidth || 0,
             h = innerHeight || 0;
-        const score = (v) => {
+        for (const v of vids) {
             const r = v.getBoundingClientRect();
             const area = Math.max(0, r.width) * Math.max(0, r.height);
             const vis =
@@ -37,34 +61,17 @@
                 r.right > 0 &&
                 r.left < w &&
                 r.top < h;
-            let s = area;
-            if (vis) s += 1e6;
-            if (!v.paused) s += 5e5;
-            if (v.readyState >= 2) s += 2e5;
-            return s;
-        };
-        return vids.sort((a, b) => score(b) - score(a))[0] || null;
-    }
-
-    function isEditable(t) {
-        if (!t) return false;
-        const tag = (t.tagName || '').toLowerCase();
-        if (t.isContentEditable) return true;
-        if (tag === 'input' || tag === 'textarea' || tag === 'select')
-            return true;
-        const root = t.getRootNode && t.getRootNode();
-        return !!(root && root.host && root.host.isContentEditable);
-    }
-
-    function isBareIKey(e) {
-        return (
-            typeof e.key === 'string' &&
-            e.key.toLowerCase() === 'i' &&
-            !e.altKey &&
-            !e.ctrlKey &&
-            !e.metaKey &&
-            !e.shiftKey
-        );
+            let s =
+                area +
+                (vis ? 1e6 : 0) +
+                (!v.paused ? 5e5 : 0) +
+                (v.readyState >= 2 ? 2e5 : 0);
+            if (s > bestScore) {
+                best = v;
+                bestScore = s;
+            }
+        }
+        return best;
     }
 
     function urlHasPlaylist(u) {
@@ -83,13 +90,17 @@
     let trackedVideo = null;
     let lastWasPlaying = false;
 
-    // Protection windows:
-    let miniplayerUntil = 0; // set after 'i' if it was playing
-    let handoffUntil = 0; // playlist/queue/navigation handoff
+    let miniplayerUntil = 0; // after 'i' (only if it was playing)
+    let handoffUntil = 0; // playlist / SPA handoff
+
+    // i-combo shield
+    let iComboUntil = 0; // always set on 'i'
+    let iComboLatchedPlay = false; // latched "was playing" for the burst
+    let lastIPressAt = 0;
 
     // Guards
-    let guardInterval = null;
-    let guardRAFActive = false;
+    let guardInterval = null,
+        guardRAF = false;
 
     // Native refs
     const NativePause = HTMLMediaElement.prototype.pause;
@@ -97,15 +108,17 @@
     const NativeAddEv = HTMLMediaElement.prototype.addEventListener;
     const NativeRemEv = HTMLMediaElement.prototype.removeEventListener;
 
-    // ---- Core helpers ----
-    function inAnyWindowFor(el) {
-        const t = now();
-        return !!(
-            el &&
-            el === trackedVideo &&
-            lastWasPlaying &&
-            (t <= miniplayerUntil || t <= handoffUntil)
-        );
+    // ---- Windows & checks ----
+    const inMini = () => now() <= miniplayerUntil;
+    const inHandoff = () => now() <= handoffUntil;
+    const inICombo = () => now() <= iComboUntil && iComboLatchedPlay;
+
+    // IMPORTANT: during i-combo, protect *any* <video>; otherwise protect the tracked one
+    function isProtected(el) {
+        if (!(el instanceof HTMLMediaElement)) return false;
+        if (inICombo()) return true;
+        const win = inMini() || inHandoff();
+        return win && (trackedVideo ? el === trackedVideo : true);
     }
 
     function extendMini(ms) {
@@ -114,6 +127,9 @@
     function extendHandoff(ms) {
         handoffUntil = Math.max(handoffUntil, now() + ms);
     }
+    function extendICombo(ms) {
+        iComboUntil = Math.max(iComboUntil, now() + ms);
+    }
 
     function safePlay(el) {
         try {
@@ -121,69 +137,45 @@
             if (p && typeof p.catch === 'function') p.catch(() => {});
         } catch {}
     }
-
     function playBurst(el) {
         try {
             requestAnimationFrame(() => safePlay(el));
         } catch {}
-        BURST_STEPS.forEach((ms) => setTimeout(() => safePlay(el), ms));
+        for (const ms of BURST_STEPS) setTimeout(() => safePlay(el), ms);
+    }
+    function postKeyKicks(el) {
+        for (const ms of POST_KEY_KICKS_MS) setTimeout(() => safePlay(el), ms);
     }
 
-    function kickIfPaused(el, extendMs = MICRO_EXTEND_MS) {
-        if (!el) return;
-        if (!inAnyWindowFor(el)) return;
-        if (el.paused) {
-            safePlay(el);
-            if (now() <= miniplayerUntil) extendMini(extendMs);
-            if (now() <= handoffUntil) extendHandoff(extendMs);
+    function ensureGuards() {
+        if (inMini() || inHandoff() || inICombo()) {
+            if (!guardInterval && !guardRAF) {
+                guardInterval = setInterval(() => {
+                    const vids = document.querySelectorAll('video');
+                    vids.forEach((v) => {
+                        if (isProtected(v) && v.paused) safePlay(v);
+                    });
+                }, GUARD_INTERVAL_MS);
+                guardRAF = true;
+                const loop = () => {
+                    if (!guardRAF) return;
+                    const vids = document.querySelectorAll('video');
+                    vids.forEach((v) => {
+                        if (isProtected(v) && v.paused) safePlay(v);
+                    });
+                    requestAnimationFrame(loop);
+                };
+                requestAnimationFrame(loop);
+            }
+        } else {
+            if (guardInterval) {
+                clearInterval(guardInterval);
+                guardInterval = null;
+            }
+            guardRAF = false;
         }
     }
 
-    function startGuards() {
-        stopGuards();
-        guardInterval = setInterval(() => {
-            if (!trackedVideo) {
-                stopGuards();
-                return;
-            }
-            if (now() > miniplayerUntil && now() > handoffUntil) {
-                stopGuards();
-                return;
-            }
-            kickIfPaused(trackedVideo);
-        }, GUARD_INTERVAL_MS);
-
-        guardRAFActive = true;
-        const loop = () => {
-            if (!guardRAFActive) return;
-            if (
-                !trackedVideo ||
-                (now() > miniplayerUntil && now() > handoffUntil)
-            ) {
-                stopGuards();
-                return;
-            }
-            kickIfPaused(trackedVideo);
-            requestAnimationFrame(loop);
-        };
-        requestAnimationFrame(loop);
-    }
-
-    function stopGuards() {
-        if (guardInterval) {
-            clearInterval(guardInterval);
-            guardInterval = null;
-        }
-        guardRAFActive = false;
-    }
-
-    function ensureGuardsRunning() {
-        if (now() <= miniplayerUntil || now() <= handoffUntil) {
-            if (!guardInterval && !guardRAFActive) startGuards();
-        }
-    }
-
-    // Keep lastWasPlaying in sync with the *current* main video
     function bindPlayStateWatchers(el) {
         if (!el) return;
         el.addEventListener(
@@ -202,74 +194,63 @@
         );
     }
 
-    // Detect new main video and refresh tracking
     function refreshTrackedVideo() {
         const v = pickMainVideo();
         if (v && v !== trackedVideo) {
             trackedVideo = v;
-            // If we come into a new video during a playlist handoff, we want to auto-assert play
             bindPlayStateWatchers(v);
-            if (now() <= handoffUntil) {
-                // Wait for it to become playable, then kick
+            if (inHandoff() || inICombo())
                 setTimeout(() => {
-                    if (v.paused) {
-                        safePlay(v);
-                        playBurst(v);
-                    }
+                    if (v.paused) playBurst(v);
                 }, 10);
-            }
         }
     }
 
-    // ---- MINIPLAYER: capture snapshot BEFORE site handlers ----
-    addEventListener(
-        'keydown',
-        (e) => {
-            if (!isBareIKey(e) || isEditable(e.target)) return;
-            const v = pickMainVideo();
-            if (!v) return;
-            trackedVideo = v;
-            lastWasPlaying = !v.paused;
-            if (lastWasPlaying) {
-                miniplayerUntil = now() + MINIPLAYER_WINDOW_MS;
-                ensureGuardsRunning();
-            } else {
-                miniplayerUntil = 0;
-            }
-        },
-        true
-    );
+    // ---- i-combo shield (keydown + keyup) ----
+    function handleIPress(e) {
+        if (!isBareIKey(e) || isEditable(e.target)) return;
+        const v = pickMainVideo();
+        if (v) trackedVideo = v;
 
-    // ---- PLAYLIST HANDOFF TRIGGERS ----
+        const t = now();
+        const newCombo = t - lastIPressAt > I_COMBO_GRACE_MS;
+        if (newCombo) {
+            iComboLatchedPlay = v ? !v.paused : true; // if we can't read, assume true
+        } else {
+            iComboLatchedPlay = iComboLatchedPlay || (v ? !v.paused : true);
+        }
+        lastIPressAt = t;
 
-    // 1) When current video ends naturally, expect an auto-advance handoff
+        extendICombo(MINIPLAYER_WINDOW_MS);
+        if (v && !v.paused) {
+            lastWasPlaying = true;
+            extendMini(MINIPLAYER_WINDOW_MS);
+        }
+        ensureGuards();
+        if (v) postKeyKicks(v);
+    }
+    addEventListener('keydown', handleIPress, true);
+    addEventListener('keyup', handleIPress, true);
+
+    // ---- Playlist / SPA triggers ----
     addEventListener(
         'ended',
         (e) => {
             const el = e.target;
             if (!(el instanceof HTMLMediaElement)) return;
-            if (el === trackedVideo) {
-                if (!el.loop) {
-                    // if looping, don't handoff
-                    // Only treat as handoff if we were actually playing
-                    if (!el.paused) {
-                        lastWasPlaying = true;
-                        handoffUntil = now() + PLAYLIST_HANDOFF_MS;
-                        ensureGuardsRunning();
-                    }
-                }
+            if (!el.loop && !el.paused) {
+                handoffUntil = now() + PLAYLIST_HANDOFF_MS;
+                ensureGuards();
             }
         },
         true
     );
 
-    // 2) Clicks inside playlist/queue side panel while video is currently playing
     addEventListener(
         'click',
         (e) => {
-            // Be conservative: any click inside a container whose tag starts with 'YTD-' and contains 'PLAYLIST' likely triggers a playlist jump.
-            let n = e.target;
-            let playlistClick = false;
+            let n = e.target,
+                playlistClick = false;
             for (let i = 0; n && i < 6; i++, n = n.parentNode) {
                 const tn = (n.tagName || '').toUpperCase();
                 if (
@@ -280,31 +261,21 @@
                     break;
                 }
             }
-            if (!playlistClick) return;
-            const v = pickMainVideo();
-            if (v && !v.paused) {
-                trackedVideo = v;
-                lastWasPlaying = true;
+            if (playlistClick) {
                 handoffUntil = now() + PLAYLIST_HANDOFF_MS;
-                ensureGuardsRunning();
+                ensureGuards();
             }
         },
         true
     );
 
-    // 3) SPA URL changes (pushState/replaceState/popstate) to a watch URL with playlist params
     (function wrapHistory() {
-        const HP = history.pushState;
-        const HR = history.replaceState;
+        const HP = history.pushState,
+            HR = history.replaceState;
         function handleURL(u) {
             if (urlHasPlaylist(u || location.href)) {
-                const v = pickMainVideo();
-                if (v && !v.paused) {
-                    trackedVideo = v;
-                    lastWasPlaying = true;
-                    handoffUntil = now() + PLAYLIST_HANDOFF_MS;
-                    ensureGuardsRunning();
-                }
+                handoffUntil = now() + PLAYLIST_HANDOFF_MS;
+                ensureGuards();
             }
         }
         history.pushState = function () {
@@ -320,22 +291,15 @@
         addEventListener('popstate', () => handleURL(location.href), true);
     })();
 
-    // 4) YouTube’s internal navigation events
     addEventListener(
         'yt-navigate-start',
         () => {
-            const v = pickMainVideo();
-            if (v && !v.paused) {
-                trackedVideo = v;
-                lastWasPlaying = true;
-                handoffUntil = now() + PLAYLIST_HANDOFF_MS;
-                ensureGuardsRunning();
-            }
+            handoffUntil = now() + PLAYLIST_HANDOFF_MS;
+            ensureGuards();
         },
         true
     );
 
-    // When a new media pipeline appears/changes during handoff, assert play
     [
         'emptied',
         'loadstart',
@@ -345,39 +309,22 @@
     ].forEach((type) => {
         addEventListener(
             type,
-            (e) => {
-                const el = e.target;
-                if (!(el instanceof HTMLMediaElement)) return;
-                refreshTrackedVideo(); // catch new <video> nodes
-                if (now() <= handoffUntil && el === trackedVideo) {
-                    setTimeout(() => {
-                        kickIfPaused(el);
-                    }, 10);
-                }
+            () => {
+                refreshTrackedVideo();
             },
             true
         );
     });
 
-    // ---- Monkey-patch pause() and wrap pause-like listeners (same hardening as v3.2) ----
+    // ---- HARDENING: make pause() a NO-OP during protection windows ----
     function patchedPause() {
         const el = this;
-        const protect = inAnyWindowFor(el);
-        const ret = NativePause.apply(el, arguments);
-        if (protect) {
-            Promise.resolve().then(() => {
-                kickIfPaused(el);
-                playBurst(el);
-            });
-            setTimeout(() => {
-                kickIfPaused(el);
-            }, 0);
-            // Micro-extend whichever window(s) are active
-            if (now() <= miniplayerUntil) extendMini(MICRO_EXTEND_MS);
-            if (now() <= handoffUntil) extendHandoff(MICRO_EXTEND_MS);
-            ensureGuardsRunning();
+        if (isProtected(el)) {
+            // Skip native pause entirely; immediately reinforce play.
+            Promise.resolve().then(() => safePlay(el));
+            return; // no-op
         }
-        return ret;
+        return NativePause.apply(el, arguments);
     }
     try {
         Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
@@ -390,103 +337,27 @@
         HTMLMediaElement.prototype.pause = patchedPause;
     }
 
+    // Also wrap pause-like events to re-assert if anything slips
     const REPLAY_TYPES = new Set(['pause', 'suspend', 'stalled', 'waiting']);
-    const WRAPPED = new WeakMap(); // el -> Map<key, Map<orig, wrapped>>
-    function getMap(el) {
-        let m = WRAPPED.get(el);
-        if (!m) {
-            m = new Map();
-            WRAPPED.set(el, m);
-        }
-        return m;
-    }
-    function keyFor(type, opts) {
-        return (
-            type +
-            '|' +
-            (opts && typeof opts === 'object'
-                ? JSON.stringify({
-                      capture: !!opts.capture,
-                      passive: !!opts.passive,
-                      once: !!opts.once,
-                  })
-                : String(!!opts))
-        );
-    }
-    function makeWrapped(el, type, original, opts) {
-        const wrapped = function () {
-            try {
-                return original.apply(this, arguments);
-            } finally {
-                if (inAnyWindowFor(el)) {
-                    Promise.resolve().then(() => kickIfPaused(el));
-                    setTimeout(() => kickIfPaused(el), 0);
-                    ensureGuardsRunning();
-                }
-            }
-        };
-        const map = getMap(el);
-        const k = keyFor(type, opts);
-        const byType = map.get(k) || new Map();
-        byType.set(original, wrapped);
-        map.set(k, byType);
-        return wrapped;
-    }
-    function lookupWrapped(el, type, original, opts) {
-        const map = getMap(el).get(keyFor(type, opts));
-        return map && map.get(original);
-    }
-    HTMLMediaElement.prototype.addEventListener = function (
-        type,
-        listener,
-        opts
-    ) {
-        if (REPLAY_TYPES.has(String(type))) {
-            const wrapped = makeWrapped(this, String(type), listener, opts);
-            return NativeAddEv.call(this, type, wrapped, opts);
-        }
-        return NativeAddEv.call(this, type, listener, opts);
-    };
-    HTMLMediaElement.prototype.removeEventListener = function (
-        type,
-        listener,
-        opts
-    ) {
-        if (REPLAY_TYPES.has(String(type))) {
-            const wrapped = lookupWrapped(this, String(type), listener, opts);
-            if (wrapped) return NativeRemEv.call(this, type, wrapped, opts);
-        }
-        return NativeRemEv.call(this, type, listener, opts);
-    };
-
-    // Event-level net
     addEventListener(
         'pause',
         (e) => {
             const el = e.target;
-            if (el instanceof HTMLMediaElement && inAnyWindowFor(el)) {
-                Promise.resolve().then(() => {
-                    kickIfPaused(el);
-                    playBurst(el);
-                });
-                ensureGuardsRunning();
+            if (el instanceof HTMLMediaElement && isProtected(el)) {
+                // keep it playing aggressively
+                safePlay(el);
+                playBurst(el);
+                extendMini(MICRO_EXTEND_MS);
+                extendHandoff(MICRO_EXTEND_MS);
+                extendICombo(MICRO_EXTEND_MS);
+                ensureGuards();
             }
         },
         true
     );
 
-    // ---- SPA housekeeping ----
-    function clearIfGone() {
-        if (trackedVideo && !trackedVideo.isConnected) {
-            trackedVideo = null;
-            lastWasPlaying = false;
-            miniplayerUntil = 0;
-            handoffUntil = 0;
-            stopGuards();
-        }
-    }
+    // ---- Housekeeping ----
     new MutationObserver(() => {
-        clearIfGone();
         refreshTrackedVideo();
     }).observe(document.documentElement, { childList: true, subtree: true });
 
@@ -501,8 +372,13 @@
     addEventListener(
         'visibilitychange',
         () => {
-            if (document.hidden) stopGuards();
-            else ensureGuardsRunning();
+            if (document.hidden) {
+                if (guardInterval) {
+                    clearInterval(guardInterval);
+                    guardInterval = null;
+                }
+                guardRAF = false;
+            } else ensureGuards();
         },
         true
     );

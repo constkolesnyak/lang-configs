@@ -1,0 +1,320 @@
+/* -------------------- FONT EMBEDDING -------------------- */
+@font-face {
+  font-family: 'Noto Serif JP';
+  src: url('_NotoSerifJP.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* -------------------- MODE TOGGLE -------------------- */
+/* Toggle which fields to show by commenting/uncommenting lines below */
+/* COMMENT OUT a line to HIDE that field/group on all cards */
+
+/* Show Word and Sentence fields */
+/* .MvJ-field--word, .MvJ-field--sentence { display: block !important; } */
+
+/* Show Definition text field (always, regardless of Definition Audio) */
+/* .MvJ-field--explanation-conditional { display: none !important; } .MvJ-field--explanation-always { display: block !important; } */
+
+/* Default: hide toggleable fields unless explicitly shown above */
+.MvJ-field--word,
+.MvJ-field--sentence {
+  display: none;
+}
+
+/* Default: show conditional definition (for variants 1 & 2), hide always-show definition */
+.MvJ-field--explanation-always {
+  display: none !important;
+}
+
+/* -------------------- PREFERENCES -------------------- */
+:root {
+  /* ---------- LAYOUT & SPACING ---------- */
+  --card-margin-top: 1em;                  /* Adds top margin to flashcard container */
+  --card-max-width: 50em;                  /* Restricts max width of card for readability */
+  --spacing-regular: 3em;                  /* Standard spacing value for padding/margins */
+  --spacing-small: 1em;                    /* Smaller spacing for mobile and compact elements */
+  --card-radius: 0.75em;                   /* Rounded corners on the card */
+  --card-padding: 1.25em;                  /* Padding inside the card */
+
+  /* ---------- ALIGNMENT ---------- */
+  --card-text-align: center;               /* Center-align content by default */
+
+  /* ---------- TYPOGRAPHY ---------- */
+  --japanese-font: 'Noto Serif JP', serif; /* Font for Japanese text */
+  --word-font-size: 4em;                   /* Large font size for Word field */
+  --sentence-font-size: 1.6em;             /* Regular font size for Sentence field */
+  --explanation-font-size: 1.1em;          /* Font size for Definition field */
+  --word-margin-bottom: 0.2em;             /* Space below Word field */
+  --sentence-margin-bottom: 1em;           /* Space below Sentence field */
+
+  /* ---------- FURIGANA (RUBY) SETTINGS ---------- */
+  --ruby-font-size: 0.35em;                /* Size of furigana relative to base text */
+  --ruby-line-height: 1.2;                 /* Line height for ruby text */
+  --ruby-color: inherit;                   /* Color of furigana (inherit = same as text) */
+  --ruby-position: over;                   /* Position: 'over' or 'under' */
+  --ruby-spacing: 0.1em;                   /* Space between furigana and base text */
+
+  /* ---------- IMAGE DISPLAY ---------- */
+  --image-max-height: 300px;               /* Limits image height */
+  --image-max-width: 300px;                /* Limits image width */
+  --image-border-radius: 0.5em;            /* Rounded corners on images */
+  --img-transition-speed: 0.3s;            /* Animation speed for image scaling */
+  --img-hover-scale: 1.05;                 /* Slight zoom effect on hover */
+  --img-hover-glow-color: rgba(255, 255, 255, 0.3); /* Glow color on image hover */
+  --img-hover-transition-speed: 0.4s;      /* Transition time for hover effect */
+
+  /* ---------- REPLAY BUTTON SETTINGS ---------- */
+  --replay-button-size: 48px;              /* Default replay button size */
+  --replay-button-size-mobile: 35px;       /* Smaller size for mobile */
+  --replay-icon-scale: 0.6;                /* Scales the play icon inside the button */
+  --replay-icon-translate-x: 20px;         /* Horizontal position adjustment */
+  --replay-icon-translate-y: 20px;         /* Vertical position adjustment */
+  --replay-hover-scale: 1.1;               /* Slight enlarge effect on hover */
+  --replay-transition-speed: 0.3s;         /* Button animation timing */
+
+  /* ---------- DIVIDER SETTINGS ---------- */
+  --divider-thickness: 2px;
+  --divider-width: 100%;
+  --divider-margin-vertical: 0.5em;
+  --divider-margin-horizontal: auto;
+  --divider-bg: transparent;
+  --divider-border-style: solid;
+
+  /* ---------- THEME COLORS ---------- */
+  --theme-bg: #3f0002;                     /* Background behind the card */
+  --card-bg: #ffffff;                      /* Card background color */
+  --card-border: #DEC8C8;                  /* Card border color */
+  --card-shadow: rgba(69, 17, 17, 0.5);    /* Card shadow with transparency */
+  --divider: #DEC8C8;
+  --replay-button-bg: #F0EBEB;
+  --replay-button-stroke: #DEC8C8;
+  --replay-button-fill: #4D0505;
+}
+
+/* -------------------- CARD STYLING -------------------- */
+.card {
+  background-color: var(--theme-bg) !important;
+  cursor: default;
+  padding: var(--card-padding);
+}
+
+/* Larger padding on desktop */
+html:not(.mobile) .card {
+  padding: var(--spacing-regular);
+}
+
+/* -------------------- FLASHCARD CONTAINER -------------------- */
+.MvJ-flashcard {
+  margin: var(--card-margin-top) auto 0 auto;   /* Adds top margin and centers horizontally */
+  max-width: var(--card-max-width);
+  background-color: var(--card-bg);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 4px 6px var(--card-shadow);
+  text-align: var(--card-text-align);
+  padding: var(--spacing-regular);
+  transition: opacity 0.4s ease;              /* QoL: smooth transition on card flip */
+  opacity: 1;
+}
+
+/* Hide Definition Audio on the front side */
+.front .MvJ-field--ExplanationAudio {
+  visibility: hidden;
+}
+
+/* Show Definition Audio on the back side */
+.back .MvJ-field--ExplanationAudio {
+  visibility: visible;
+}
+
+/* Equal spacing around divider - audio field after divider */
+.MvJ-divider--answer + .MvJ-field--front {
+  margin-top: 0.5em;                       /* Matches divider margin for equal spacing */
+  margin-bottom: 0.3em;
+}
+
+/* Default spacing for other front fields */
+.MvJ-field--front {
+  margin-bottom: 0.3em;
+}
+
+/* -------------------- WORD & SENTENCE FIELDS -------------------- */
+.MvJ-field--word {
+  font-size: var(--word-font-size);
+  font-weight: bold;
+  margin-top: 0.3em;                       /* Space above Word field (after audio) */
+  margin-bottom: var(--word-margin-bottom);
+  color: #000000 !important;
+  font-family: var(--japanese-font);
+}
+
+.MvJ-field--word * {
+  color: #000000 !important;
+}
+
+.MvJ-field--sentence {
+  font-size: var(--sentence-font-size);
+  margin-bottom: var(--sentence-margin-bottom);
+  color: #000000 !important;
+  font-family: var(--japanese-font);
+}
+
+.MvJ-field--sentence * {
+  color: #000000 !important;
+}
+
+/* Larger ruby for sentence field for better readability */
+.MvJ-field--sentence rt {
+  font-size: 0.5em;
+}
+
+.MvJ-field--explanation {
+  font-size: var(--explanation-font-size);
+  margin-top: 1em;
+  margin-bottom: 1em;
+  color: #000000 !important;
+  font-family: var(--japanese-font);
+  line-height: 1.6;
+}
+
+.MvJ-field--explanation * {
+  color: #000000 !important;
+}
+
+/* -------------------- FURIGANA (RUBY) STYLING -------------------- */
+ruby {
+  ruby-position: var(--ruby-position);
+}
+
+rt {
+  font-size: var(--ruby-font-size);
+  line-height: var(--ruby-line-height);
+  color: var(--ruby-color);
+  user-select: none;                       /* Prevents selecting furigana when copying */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+/* Add spacing between ruby and base text */
+ruby > rt {
+  margin-top: var(--ruby-spacing);
+}
+
+/* -------------------- DIVIDERS -------------------- */
+.MvJ-divider,
+.MvJ-divider--answer {
+  height: 0;
+  border: none;
+  border-bottom-width: var(--divider-thickness);
+  border-bottom-style: var(--divider-border-style);
+  border-bottom-color: var(--divider);
+  background-color: var(--divider-bg);
+  width: var(--divider-width);
+  margin: var(--divider-margin-vertical) var(--divider-margin-horizontal);
+}
+
+/* Ensure equal spacing before divider by adding margin to preceding elements */
+.MvJ-divider--answer::before {
+  content: '';
+  display: block;
+  margin-bottom: 0;
+}
+
+/* Add bottom margin to flashcard content before divider */
+.MvJ-flashcard > *:last-of-type {
+  margin-bottom: 0.5em;
+}
+
+/* -------------------- IMAGE STYLES -------------------- */
+img {
+  border-radius: var(--image-border-radius);
+  display: block;
+  margin: var(--spacing-regular) auto;
+  margin-top: 0.8em;                       /* Reduced top margin for less space above image */
+  max-width: var(--image-max-width);
+  max-height: var(--image-max-height);
+  object-fit: contain;
+  transition: transform var(--img-transition-speed), box-shadow var(--img-hover-transition-speed);
+}
+
+img:hover {
+  transform: scale(var(--img-hover-scale));
+  box-shadow: 0 0 10px var(--img-hover-glow-color);
+}
+
+/* -------------------- REPLAY BUTTON -------------------- */
+.replay-button {
+  display: inline-block;
+  margin-top: var(--spacing-small);            /* Adds spacing above replay buttons */
+  margin-bottom: 0.5em;                        /* Adds spacing below for equal padding around divider */
+}
+
+.replay-button svg {
+  width: var(--replay-button-size);
+  height: var(--replay-button-size);
+  transition: transform var(--replay-transition-speed) ease;
+}
+
+.replay-button svg circle {
+  fill: var(--replay-button-bg);
+  stroke: var(--replay-button-stroke);
+  stroke-width: 1;
+  transition: fill var(--replay-transition-speed), stroke var(--replay-transition-speed);
+}
+
+.replay-button svg path {
+  fill: var(--replay-button-fill);
+  transform: scale(var(--replay-icon-scale))
+             translate(var(--replay-icon-translate-x), var(--replay-icon-translate-y));
+}
+
+.replay-button svg:hover {
+  transform: scale(var(--replay-hover-scale));
+}
+
+/* QoL: Replay button focus outline for accessibility */
+.replay-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+}
+
+/* QoL: Fade-out effect when flipping cards (for a smoother UX) */
+.card.flipping .MvJ-flashcard {
+  opacity: 0;
+}
+
+/* -------------------- RESPONSIVE DESIGN -------------------- */
+@media (max-width: 600px) {
+  .card {
+    padding: var(--spacing-small);
+  }
+
+  .MvJ-flashcard {
+    padding: var(--spacing-small);
+    max-width: 90%;
+    margin-top: var(--spacing-small); /* Slightly reduced top margin for mobile */
+  }
+
+  .replay-button svg {
+    width: var(--replay-button-size-mobile);
+    height: var(--replay-button-size-mobile);
+  }
+
+  .MvJ-field--word {
+    font-size: 2.5em;  /* Adjusted for mobile */
+  }
+
+  .MvJ-field--sentence {
+    font-size: 1.3em;  /* Larger on mobile for better readability */
+  }
+
+  .MvJ-field--explanation {
+    font-size: 1em;  /* Slightly smaller on mobile */
+  }
+
+  /* Slightly larger furigana on mobile for better readability */
+  rt {
+    font-size: 0.4em;
+  }
+}

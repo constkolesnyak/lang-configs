@@ -116,19 +116,22 @@
     }
 
     function toCSV(items) {
-        const lines = ['name,downloads,size_mb,url,modified'];
+        const lines = ['name_hyperlink,name,url,downloads,size_mb,modified'];
         items.forEach((item) => {
-            const n = item.name.replace(/"/g, '""');
-            const d = item.downloads;
-            const s = item.size_mb;
-            const u = item.url.replace(/"/g, '""');
-            const m = item.modified.replace(/"/g, '""');
-            lines.push(`"${n}",${d},${s},"${u}","${m}"`);
+            const name = item.name.replace(/"/g, '""');
+            const downloads = item.downloads;
+            const size_mb = item.size_mb;
+            const url = item.url.replace(/"/g, '""');
+            const modified = item.modified.replace(/"/g, '""');
+            const hyperlink = `=HYPERLINK(""${url}"",""${name}"")`;
+            lines.push(
+                `"${hyperlink}","${name}","${url}",${downloads},${size_mb},"${modified}"`
+            );
         });
         return lines.join('\n');
     }
 
-    function downloadCSV(csvText, filename = 'mediafire_folder.csv') {
+    function downloadCSV(csvText, filename) {
         const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
@@ -145,7 +148,16 @@
             const rows = await scrollAndCollectAll();
             button.textContent = 'Creating CSV...';
             const csv = toCSV(rows);
-            downloadCSV(csv);
+
+            // Get folder name from the page
+            const folderNameElement = document.getElementById('folder_name');
+            const folderName = folderNameElement
+                ? folderNameElement.getAttribute('title') ||
+                  folderNameElement.textContent
+                : 'mediafire_folder';
+            const filename = `${folderName}.csv`;
+
+            downloadCSV(csv, filename);
         } finally {
             button.disabled = false;
             button.textContent = 'Export CSV';

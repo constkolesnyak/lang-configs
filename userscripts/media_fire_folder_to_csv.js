@@ -85,6 +85,10 @@
 
     // Scroll down by adjusting documentElement.scrollTop and collect new entries
     async function scrollAndCollectAll() {
+        // Scroll to the very top first
+        document.documentElement.scrollTop = 0;
+        await wait(1000);
+
         const resultMap = new Map();
         let unchanged = 0;
         let prevY = -1;
@@ -115,16 +119,16 @@
         const lines = ['name,downloads,size_mb,url,modified'];
         items.forEach((item) => {
             const n = item.name.replace(/"/g, '""');
-            const d = item.downloads.replace(/"/g, '""');
-            const s = item.size_mb.replace(/"/g, '""');
+            const d = item.downloads;
+            const s = item.size_mb;
             const u = item.url.replace(/"/g, '""');
             const m = item.modified.replace(/"/g, '""');
-            lines.push(`"${n}","${d}","${s}","${u}","${m}"`);
+            lines.push(`"${n}",${d},${s},"${u}","${m}"`);
         });
         return lines.join('\n');
     }
 
-    function downloadCSV(csvText, filename = 'anki_decks.csv') {
+    function downloadCSV(csvText, filename = 'mediafire_folder.csv') {
         const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
